@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Echo Roll Calculator</title>
+<style>
+  :root{
+    --bg: #0d1117;
+    --panel: #131a24;
+    --panel-2: #171f2b;
+    --line: #26313f;
+    --ink: #dbe4ee;
+    --ink-dim: #7f8fa3;
+    --accent: #5fd0c4;
+    --accent-2: #c99bff;
+    --warn: #e0a24d;
+    --bad: #e2685f;
+    --good: #6fce8a;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); padding:28px 20px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1500px; width:94%; margin:0 auto;}
+  header{margin-bottom:26px; border-bottom:1px solid var(--line); padding-bottom:18px;}
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:8px;
+  }
+  h1{font-size:26px; margin:0 0 6px; font-weight:650; letter-spacing:-0.01em;}
+  .sub{color:var(--ink-dim); font-size:13.5px; line-height:1.5; max-width:640px;}
+
+  .grid{display:grid; grid-template-columns: 1fr 1fr; gap:16px;}
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px 18px 16px;
+  }
+  .panel h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-dim);
+    margin:0 0 14px; font-weight:600; display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
+
+  label.field{display:block; margin-bottom:12px;}
+  label.field:last-child{margin-bottom:0;}
+  .field-label{font-size:12.5px; color:var(--ink-dim); margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;}
+  select, input[type=number]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
+    padding:8px 10px; border-radius:6px; font-family:var(--sans); font-size:13.5px;
+  }
+  select:focus, input:focus{outline:1px solid var(--accent); border-color:var(--accent);}
+
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .toggle-row .field-label{margin:0;}
+  .switch{position:relative; width:42px; height:24px; flex:none;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{
+    position:absolute; inset:0; background:#374357; border:1px solid #47566c; border-radius:24px; cursor:pointer; transition:.15s;
+  }
+  .slider:before{
+    content:""; position:absolute; height:16px; width:16px; left:3px; top:2.5px;
+    background:#c3ccd8; border-radius:50%; transition:.15s;
+  }
+  .switch input:checked + .slider{background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 3px rgba(95,208,196,0.22);}
+  .switch input:checked + .slider:before{transform:translateX(18px); background:#06201c;}
+
+  .sub-block{
+    border-left:2px solid var(--line); padding-left:12px; margin:10px 0 4px;
+    display:none;
+  }
+  .sub-block.show{display:block;}
+  .sub-block + .sub-block{margin-top:14px;}
+  .sub-block-title{font-size:12px; color:var(--accent-2); margin-bottom:8px; font-weight:600;}
+
+  .inline-two{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+
+  .note{font-size:11.5px; color:var(--ink-dim); margin-top:6px; line-height:1.5;}
+
+  .compute-bar{
+    display:flex; align-items:center; gap:14px; margin:22px 0 6px;
+  }
+  button#calc{
+    background:var(--accent); color:#06201c; border:none; font-weight:650;
+    padding:11px 22px; border-radius:7px; font-size:13.5px; cursor:pointer;
+    font-family:var(--sans); letter-spacing:.01em;
+  }
+  button#calc:hover{filter:brightness(1.08);}
+  .autonote{font-size:12px; color:var(--ink-dim);}
+
+  button.secondary-btn{
+    background:var(--panel-2); color:var(--accent-2); border:1px solid var(--line);
+    padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer;
+    font-family:var(--sans);
+  }
+  button.secondary-btn:hover{border-color:var(--accent-2);}
+  #compareWrap{margin-top:14px;}
+  #compareWrap table{font-size:12px;}
+  #compareWrap .best{color:var(--good); font-weight:700;}
+  .compare-box{position:relative; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px 10px;}
+
+  /* --- info tooltip bubble --- */
+  .info-bubble{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:50%; background:var(--panel-2);
+    border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:10.5px; font-weight:700;
+    cursor:help; position:relative; margin-left:6px; flex:none; font-family:var(--sans);
+  }
+  .info-bubble:hover{border-color:var(--accent-2); color:var(--accent-2);}
+  .info-bubble .tooltip{
+    display:none; position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+    width:280px; background:#1c2531; border:1px solid var(--line); border-radius:8px;
+    padding:11px 13px; font-size:11.5px; line-height:1.55; color:var(--ink); font-weight:400;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:20; text-align:left;
+  }
+  .info-bubble:hover .tooltip{display:block;}
+  .info-bubble .tooltip b{color:var(--accent-2);}
+  .info-bubble.tooltip-down .tooltip{bottom:auto; top:22px;}
+
+  h2 .info-bubble{margin-left:8px;}
+
+  /* --- cull control (invalidation slider) --- */
+  .cull-block{margin-top:6px;}
+  .cull-title-row{display:flex; align-items:center; margin-bottom:8px;}
+  .cull-title{font-size:12.5px; color:var(--ink); font-weight:600;}
+  select.mode-mini{
+    width:auto; max-width:220px; font-size:11.5px; padding:5px 8px; margin-bottom:10px;
+    background:var(--panel-2); color:var(--accent-2); border:1px solid var(--line);
+  }
+  /* Track shows all 8 possible rolled values as 8 equal color bands (0-100%).
+     The interactive <input range> only spans the first 7/8 (0-87.5%) of that
+     width, so its value (0-7) always lines up with a segment boundary and the
+     handle can never reach the 8th (always-safe) band on the far right. */
+  .slider-wrap{position:relative; height:34px; margin-bottom:4px;}
+  .cull-track-bg{
+    position:absolute; top:9px; left:0; width:100%; height:10px; border-radius:5px; pointer-events:none;
+    background:linear-gradient(to right,
+      #6fce8a 0%, #6fce8a 12.5%,
+      #94d073 12.5%, #94d073 25%,
+      #b8d15c 25%, #b8d15c 37.5%,
+      #dcd24c 37.5%, #dcd24c 50%,
+      #e0b84d 50%, #e0b84d 62.5%,
+      #e0994d 62.5%, #e0994d 75%,
+      #e2795a 75%, #e2795a 87.5%,
+      #e2685f 87.5%, #e2685f 100%
+    );
+  }
+  input[type=range].cull-slider{
+    -webkit-appearance:none; appearance:none; position:absolute; top:9px; left:0;
+    width:87.5%; height:10px; background:transparent; outline:none; cursor:pointer; margin:0; z-index:2;
+  }
+  input[type=range].cull-slider::-webkit-slider-runnable-track{background:transparent; height:10px;}
+  input[type=range].cull-slider::-moz-range-track{background:transparent; height:10px;}
+  input[type=range].cull-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:#0d1117; border:3px solid var(--ink); cursor:pointer; margin-top:-4px;
+  }
+  input[type=range].cull-slider::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%; background:#0d1117; border:3px solid var(--ink); cursor:pointer;
+  }
+  .slider-ticks{position:absolute; top:23px; left:0; width:100%; height:11px;}
+  .slider-ticks span{
+    position:absolute; transform:translateX(-50%); font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);
+  }
+  .slider-ticks span.active{color:var(--ink); font-weight:700;}
+  .impact-row{display:flex; align-items:center; gap:10px; margin-top:14px;}
+  .impact-track{flex:1; height:8px; border-radius:4px; background:var(--panel-2); overflow:hidden;}
+  .impact-fill{height:100%; background:var(--bad); border-radius:4px; transition:width .15s;}
+  .impact-val{font-family:var(--mono); font-size:13px; font-weight:700; color:var(--bad); width:52px; text-align:right;}
+  .impact-caption{font-size:11px; color:var(--ink-dim); margin-top:4px;}
+  .cull-disabled{opacity:.4; pointer-events:none;}
+
+  .results{margin-top:22px;}
+  .headline{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-bottom:18px;
+  }
+  @media (max-width:760px){ .headline{grid-template-columns:1fr;} }
+  .stat{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 16px 14px;
+  }
+  .stat .k{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:8px;}
+  .stat .v{font-family:var(--mono); font-size:24px; font-weight:600; color:var(--accent);}
+  .stat .v.alt{color:var(--accent-2);}
+  .stat .v2{font-size:12px; color:var(--ink-dim); margin-top:4px; font-family:var(--sans);}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-dim); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{padding:9px 10px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px;}
+  tbody tr:last-child td{border-bottom:none;}
+  .tag{
+    display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px; font-weight:600;
+    font-family:var(--sans); letter-spacing:.02em;
+  }
+  .tag.ok{background:rgba(111,206,138,.14); color:var(--good);}
+  .tag.bad{background:rgba(226,104,95,.14); color:var(--bad);}
+  .tag.warn{background:rgba(224,162,77,.14); color:var(--warn);}
+  .tag.neu{background:rgba(127,143,163,.14); color:var(--ink-dim);}
+
+  .bar-row{display:flex; align-items:center; gap:10px; margin:3px 0 14px;}
+  .bar-track{flex:1; height:8px; border-radius:4px; background:var(--panel-2); overflow:hidden; display:flex;}
+  .bar-seg{height:100%;}
+
+  details.assumptions{
+    margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px;
+  }
+  details.assumptions summary{cursor:pointer; font-size:12.5px; color:var(--accent-2); font-weight:600;}
+  details.assumptions .body{margin-top:12px; font-size:12.5px; color:var(--ink-dim); line-height:1.65;}
+  details.assumptions ul{padding-left:18px; margin:6px 0;}
+  details.assumptions code{color:var(--ink); background:var(--panel-2); padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:11.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Exact enumeration &middot; echo substat rolling</div>
+    <h1>Echo Roll Calculator</h1>
+    <div class="sub">Set your target line count and rolling strategy. </div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2><span class="dot"></span>Target echo (Start Here)
+        <span class="info-bubble tooltip-down">?<span class="tooltip">
+          <b>Secondary</b> = a rolled substat from the pool of 8 secondary options: HP%, ATK%, DEF%, Basic Attack%, Heavy Attack%, Resonance Skill%, Resonance Liberation%, Energy Regen%. <br><br>
+          <b>Tertiary</b> = a rolled substat from Flat HP, Flat ATK, or Flat DEF. <br><br>
+          This calculator assumes a subset of 3 secondaries substats and one tertiary are desired. 
+        </span></span>
+      </h2>
+      <label class="field">
+        <div class="field-label">Desired line count (or better)</div>
+        <select id="target">
+          <option value="2">2 liner &mdash; CR+CD</option>
+          <option value="3" selected>3 liner &mdash; CR+CD + 1 secondary</option>
+          <option value="3.5">3.5 liner &mdash; CR+CD + 1 secondary + 1 tertiary</option>
+          <option value="4">4 liner &mdash; CR+CD + 2 secondary</option>
+          <option value="4.5">4.5 liner &mdash; CR+CD + 2 secondary + 1 tertiary</option>
+          <option value="5">5 liner &mdash; CR+CD + 3 secondary</option>
+        </select>
+      </label>
+      <div class="note">Rolling always stops the instant the target (or better) is locked in, and always stops the instant it becomes mathematically impossible &mdash; this happens regardless of the toggles below.</div>
+    </div>
+
+    <div class="panel">
+      <div class="toggle-row">
+        <h2><span class="dot"></span>Early stopping (Reduce tuner consumption)</h2>
+        <label class="switch"><input type="checkbox" id="esEnable" checked><span class="slider"></span></label>
+      </div>
+      <div class="sub-block" id="esBlock">
+        <label class="field">
+          <div class="field-label">Check after</div>
+          <select id="esCheckAt">
+            <option value="1">Roll 1</option>
+            <option value="2" selected>Rolls 1&ndash;2</option>
+          </select>
+        </label>
+        <label class="field">
+          <div class="field-label">Ditch unless that roll(s) include</div>
+          <select id="esSubset">
+            <option value="primary">Crit Rate or Crit Damage (2 of 13 substats)</option>
+            <option value="primary_secondary" selected>CR/CD, or a desired secondary (5 of 13 substats)</option>
+            <option value="any">CR/CD + desired secondary/tertiary (6 of 13 substats)</option>
+          </select>
+        </label>
+      </div>
+      <div class="btn-group">
+        <button id="compareBtn" class="secondary-btn">Compare all 6 early-stopping strategies</button>
+      </div>  
+      <div id="compareWrap"></div>
+    </div>
+
+    <div class="panel" style="grid-column:1/-1;">
+      <h2><span class="dot"></span>Echo Culling (Improve quality of rolls)</h2>
+      <div class="sub-block show" id="invBlock" style="border:none; padding-left:0; margin-top:0;">
+        <div class="grid" style="grid-template-columns:1fr 1fr; gap:22px;">
+          <div>
+            <div class="toggle-row" style="margin-bottom:14px; border-top:1px solid var(--line); padding-top:12px;">
+              <div class="field-label" style="font-weight:600; color:var(--ink);">Cull CR/CD rolls</div>
+              <label class="switch"><input type="checkbox" id="pInvEnable"><span class="slider"></span></label>
+            </div>
+            <div class="cull-block" id="pCullBlock">
+              <select id="pInvMode" class="mode-mini">
+                <option value="hard">Hard mode</option>
+                <option value="soft" selected>Soft mode</option>
+              </select>
+              <span class="info-bubble">?<span class="tooltip">
+                  <b>Hard</b> mode: rolling one of the lowest x possible values for CR or CD always invalidates the echo.<br><br>
+                  <b>Soft</b> mode: same trigger, but the echo survives if Crit Value (2&times;CR% + CD%) still comes out &ge; 25.2 + 2.4 + 2.4x once both CR+CD are known.
+                </span></span>
+              <div class="slider-wrap">
+                <div class="cull-track-bg"></div>
+                <input type="range" id="pInvX" class="cull-slider" min="0" max="7" step="1" value="2">
+                <div class="slider-ticks" id="pTicks"></div>
+              </div>
+              <div class="impact-row">
+                <div class="impact-track"><div class="impact-fill" id="pImpactFill"></div></div>
+                <div class="impact-val" id="pImpactVal">&mdash;</div>
+              </div>
+              <div class="impact-caption">reduction in usable echoes caused by this rule alone</div>
+            </div>
+          </div>
+          <div>
+            <div class="toggle-row" style="margin-bottom:14px; border-top:1px solid var(--line); padding-top:12px;">
+              <div class="field-label" style="font-weight:600; color:var(--ink);">Cull secondary rolls</div>
+              <label class="switch"><input type="checkbox" id="sInvEnable"><span class="slider"></span></label>
+            </div>
+            <div class="cull-block" id="sCullBlock">
+              <select id="sInvMode" class="mode-mini">
+                <option value="hard">Hard mode</option>
+                <option value="soft" selected>Soft mode</option>
+              </select>
+                <span class="info-bubble">?<span class="tooltip">
+                  <b>Hard</b> mode: rolling one of the lowest y possible values for a desired secondary always invalidates the echo.<br><br>
+                  <b>Soft</b> mode: same trigger, but the echo survives if the running average rank of desired-secondary rolls so far beats the low band (rank &gt; y&minus;1).
+                </span></span>
+              <div class="slider-wrap">
+                <div class="cull-track-bg"></div>
+                <input type="range" id="sInvY" class="cull-slider" min="0" max="7" step="1" value="2">
+                <div class="slider-ticks" id="sTicks"></div>
+              </div>
+              <div class="impact-row">
+                <div class="impact-track"><div class="impact-fill" id="sImpactFill"></div></div>
+                <div class="impact-val" id="sImpactVal">&mdash;</div>
+              </div>
+              <div class="impact-caption">reduction in usable echoes caused by this rule alone</div>
+            </div>
+          </div>
+        </div>
+        <div class="note" style="margin-top:14px;">Each slider's track shows all 8 possible rolled values for that substat, low to high. The handle marks how many of the lowest values get culled (0 = none, 7 = all but the very highest).</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compute-bar">
+    <button id="calc">Recalculate</button>
+    <span class="autonote">Updates automatically as you change settings.</span>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <details class="assumptions">
+    <summary>Assumptions &amp; modeling notes</summary>
+    <div class="body">
+      <ul>
+        <li>The 13-substat pool: Crit Rate + Crit Damage (always desired); <strong>a subset of 3 secondaries (e.g.: ATK%, Resonance Liberation%, Energy Regen%)</strong>; the other 5 secondaries (e.g.: Resonance Skill%, Basic Attack%, DEF%, HP%, Heavy Attack%) as undesired; <strong>1 tertiary (e.g.: Flat ATK)</strong> as desired; other as undesired tertiaries.</li>
+        <li>Every draw is uniformly random over whatever remains in the 13-slot pool (1/13, 1/12, ... 1/9) &mdash; category only determines the value distribution once a substat is picked, matching the Korea revealed values per-substat value tables.</li>
+        <li>A line count score is computed as 2 (CR+CD) + count of desired secondaries + 0.5 if the desired tertiary was rolled. "Target X or better" means this score reaches X &mdash; so hitting a 5-liner counts as success for a 4-liner target, etc.</li>
+        <li>Rolling stops (to avoid wasting tuners) the instant the target is locked in, the instant it becomes impossible, on hard invalidation, on an early-stop ditch, or at 5 total rolls (echoes cap at 5 substats).</li>
+        <li><strong>Soft Cull CR/CD rolls:</strong> Crit Value = 2&times;CR% + CD%. The exception is only evaluated once <em>both</em> CR+CD are known (can't compute CV from one value), using the formula as given: CV &ge; 25.2 + 2.4 + 2.4x.</li>
+        <li><strong>Soft Cull secondary rolls:</strong> since the 3 desired secondaries have different real units (ATK% vs Energy Regen%, etc.), "average value" is evaluated as the average <em>rank</em> (0=lowest possible roll, 7=highest) across desired-secondary rolls so far, compared against the top of the low band (rank y&minus;1). This keeps the comparison unit-agnostic; treat it as the intended spirit of the rule rather than a literal percentage average.</li>
+        <li>"Failed &alpha; liner" is split into three buckets: <strong>culled</strong> (echo culling triggered), <strong>unreachable</strong> (bad luck on category draws made the target impossible with no culling involved), and <strong>ditched</strong> (early-stopping abandoned it). All three cost fewer tuners on average than a full 5-roll echo.</li>
+        <li>Expected echoes/tuners assume each echo attempt is independent (standard geometric-distribution framing): expected echoes = 1/P(success); expected tuners = (10 &times; average rolls per failed attempt) &times; (1&minus;p)/p + (10 &times; average rolls per successful attempt).</li>
+        <li>The "reduction in usable echoes caused by this rule alone" formula: 1 − (expected echoes without this rule ÷ expected echoes with it)</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="assumptions">
+    <summary>FAQ</summary>
+    <div class="body">
+      <ul>
+        <li>What's the purpose of this site? 
+        <ul>
+          <li>Find out how many echoes and tuners you are expected to require for your target echo.</li>
+          <li>Compare early stopping strategies which reduce tuner requirements at the cost of echoes.</li>
+          <li>Visualize how many echoes you are throwing away by refusing low rolls.</li>
+        </ul></li>
+        <li>How is this possible? <br>The Korean government forced wuwa to show the susbstat roll probabilities and value probability distribution function. Using this information, probabilities are computed by exhaustively enumerating every possible roll sequence and outcome &mdash; not simulated.</br></li>
+        <li>What is Soft Mode? <br>It is only active when culling the last roll. Helps save some decent echoes. e.g.: at +20 you have 10.5% CR and one secondary, +25 rolls 12.6% CD. The calculator will save this echo even if you cull up to the 4th lowest roll. when used in Soft Mode. Hard mode will cull it.</br></li>
+        <li>What if my character only wants 2 secondaries? <br>WIP</br></li>
+      </ul>
+    </div>
+  </details>
+</div>
+
+<script>
+'use strict';
+'use strict';
+
+// ---------- Data from CSV ----------
+const CR_VALUES = [6.30,6.90,7.50,8.10,8.70,9.30,9.90,10.50];
+const CD_VALUES = [12.60,13.80,15.00,16.20,17.40,18.60,19.80,21.00];
+const PRIMARY_PROBS = [70/3,70/3,70/3,8,8,8,3,3].map(x=>x/100);
+const SEC_PROBS = [6.80,7.77,20.39,24.27,17.48,14.56,5.83,2.91].map(x=>x/100);
+
+function cumFirst(arr, n){ let s=0; for(let i=0;i<n;i++) s+=arr[i]; return s; }
+
+// ---------- Config ----------
+// target: 2,3,3.5,4,4.5,5
+// earlyStop: null | {checkAt:1|2, subset:'primary'|'primary_secondary'|'any'}
+// invalidation: {primary:null|{x,soft}, secondary:null|{y,soft}}
+
+function computeDistribution(config){
+  const target = config.target;
+  const earlyStop = config.earlyStop; // null or {checkAt, subset}
+  const inv = config.invalidation || {primary:null, secondary:null};
+  const primaryInv = inv.primary; // {x,soft} or null
+  const secondaryInv = inv.secondary; // {y,soft} or null
+
+  const primarySoft = !!(primaryInv && primaryInv.soft);
+  const primaryHard = !!(primaryInv && !primaryInv.soft);
+  const secondarySoft = !!(secondaryInv && secondaryInv.soft);
+  const secondaryHard = !!(secondaryInv && !secondaryInv.soft);
+
+  const pLowX = primaryInv ? cumFirst(PRIMARY_PROBS, primaryInv.x) : 0;
+  const pLowY = secondaryInv ? cumFirst(SEC_PROBS, secondaryInv.y) : 0;
+  const cvThreshold = primaryInv ? (25.2 + 2.4 + 2.4*primaryInv.x) : null;
+
+  function score(s){
+    if (s.primariesGotten !== 2) return 0;
+    return 2 + s.dsGotten + (s.tertiaryGotten ? 0.5 : 0);
+  }
+
+  function maxAchievableScore(s, drawsLeft){
+    const needPrimary = 2 - s.primariesGotten;
+    if (needPrimary > drawsLeft) return 0;
+    // needPrimary primaries are guaranteed still in pool if not gotten
+    const remaining = drawsLeft - needPrimary;
+    const maxDSAdd = Math.min(3 - s.dsGotten, s.poolDS);
+    const dsUse = Math.min(maxDSAdd, remaining);
+    const rem2 = remaining - dsUse;
+    const maxTertAdd = s.tertiaryGotten ? 0 : Math.min(1, s.poolDT);
+    const tertUse = Math.min(maxTertAdd, rem2);
+    const tertFlag = s.tertiaryGotten || tertUse > 0;
+    return 2 + (s.dsGotten + dsUse) + (tertFlag ? 0.5 : 0);
+  }
+
+  // NOTE ON SUBSET SIZES (important for interpreting ditch rates):
+  // These three options ARE nested (primary is a subset of primary_secondary
+  // is a subset of "any") — each one only adds more accepted categories:
+  //   'primary'           -> {CR, CD}                                        = 2 of 13 substats
+  //   'primary_secondary' -> {CR, CD} + the 3 DESIRED secondaries             = 5 of 13 substats
+  //   'any' (desired subset) -> {CR, CD} + desired secondaries + desired tertiary = 6 of 13 substats
+  // Undesired secondaries (Resonance Skill%, Basic Attack%, DEF%, HP%, Heavy
+  // Attack%) never count toward any of these three options — only CR/CD and
+  // the desired secondary/tertiary substats do. So looser option -> larger
+  // accepted slice of the pool -> lower ditch rate, monotonically:
+  //   primary (tightest, highest ditch %) < primary_secondary (middle) < any (loosest, lowest ditch %)
+  function subsetContains(subset, category){
+    if (subset === 'primary') return category === 'CR' || category === 'CD';
+    if (subset === 'primary_secondary') return category==='CR'||category==='CD'||category==='DS';
+    if (subset === 'any') return category==='CR'||category==='CD'||category==='DS'||category==='DT';
+    return false;
+  }
+
+  const memo = new Map();
+  const outcomeKeys = []; // for stable key building
+
+  function key(s){
+    // Build minimal canonical key
+    return [
+      s.poolCR,s.poolCD,s.poolDS,s.poolUS,s.poolDT,s.poolUT,
+      s.rollsSoFar, s.primariesGotten, s.dsGotten,
+      s.tertiaryGotten?1:0,
+      primarySoft ? (s.crVal===null?-1:s.crVal) : 'x',
+      primarySoft ? (s.cdVal===null?-1:s.cdVal) : 'x',
+      primarySoft ? (s.primaryLowFlag?1:0) : 'x',
+      secondarySoft ? s.dsRankSum : 'x',
+      earlyStop ? (s.cat1||'') : 'x',
+    ].join('|');
+  }
+
+  // returns Map(outcomeType+':'+rolls -> prob), representing distribution starting from state with prob 1
+  function solve(s){
+    // Terminal checks (in order): should have been resolved by caller before recursing;
+    // this function assumes s is a "live" (non-terminal) state about to make a draw.
+    const k = key(s);
+    if (memo.has(k)) return memo.get(k);
+
+    const poolTotal = s.poolCR+s.poolCD+s.poolDS+s.poolUS+s.poolDT+s.poolUT;
+    const dist = new Map();
+
+    function addOutcome(type, rolls, prob){
+      if (prob<=0) return;
+      const kk = type+':'+rolls;
+      dist.set(kk, (dist.get(kk)||0) + prob);
+    }
+    function addDist(subDist, prob){
+      if (prob<=0) return;
+      for (const [kk,p] of subDist) dist.set(kk, (dist.get(kk)||0) + p*prob);
+    }
+
+    function afterDraw(newS, drawProb){
+      // resolve terminal checks in order, else recurse
+      // 1. invalidation already applied to newS.invalidNow flag by caller
+      if (newS.invalidNow){
+        addOutcome('failed_invalid', newS.rollsSoFar, drawProb);
+        return;
+      }
+      // 2. early stop checkpoint
+      if (earlyStop && newS.rollsSoFar === earlyStop.checkAt && !newS.earlyStopChecked){
+        const pass = newS.anyInSubset;
+        if (!pass){
+          addOutcome('ditched', newS.rollsSoFar, drawProb);
+          return;
+        }
+        newS.earlyStopChecked = true;
+      }
+      // 3. success
+      if (score(newS) >= target){
+        addOutcome('achieved', newS.rollsSoFar, drawProb);
+        return;
+      }
+      // 4. unreachable
+      const drawsLeft = 5 - newS.rollsSoFar;
+      if (maxAchievableScore(newS, drawsLeft) < target){
+        addOutcome('failed_unreachable', newS.rollsSoFar, drawProb);
+        return;
+      }
+      // 5. out of draws
+      if (newS.rollsSoFar >= 5){
+        addOutcome('failed_unreachable', newS.rollsSoFar, drawProb);
+        return;
+      }
+      // else recurse
+      const sub = solve(newS);
+      addDist(sub, drawProb);
+    }
+
+    // CR branch
+    if (s.poolCR > 0){
+      const pCat = s.poolCR/poolTotal;
+      if (primarySoft){
+        for (let i=0;i<8;i++){
+          const p = pCat*PRIMARY_PROBS[i];
+          const ns = cloneAndDrawPrimary(s,'CR', i, primaryInv, pLowX);
+          finalizePrimaryDraw(ns, s, primaryInv, cvThreshold);
+          setSubsetInfo(ns, s, 'CR', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else if (primaryHard){
+        // low branch
+        {
+          const p = pCat*pLowX;
+          const ns = cloneAndDrawPrimary(s,'CR', null, primaryInv, pLowX);
+          ns.invalidNow = true; // hard mode: immediate invalidation
+          setSubsetInfo(ns, s, 'CR', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+        // high branch
+        {
+          const p = pCat*(1-pLowX);
+          const ns = cloneAndDrawPrimary(s,'CR', null, primaryInv, pLowX);
+          ns.invalidNow = false;
+          setSubsetInfo(ns, s, 'CR', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else {
+        const ns = cloneAndDrawPrimary(s,'CR', null, null, 0);
+        setSubsetInfo(ns, s, 'CR', earlyStop, subsetContains);
+        afterDraw(ns, pCat);
+      }
+    }
+    // CD branch
+    if (s.poolCD > 0){
+      const pCat = s.poolCD/poolTotal;
+      if (primarySoft){
+        for (let i=0;i<8;i++){
+          const p = pCat*PRIMARY_PROBS[i];
+          const ns = cloneAndDrawPrimary(s,'CD', i, primaryInv, pLowX);
+          finalizePrimaryDraw(ns, s, primaryInv, cvThreshold);
+          setSubsetInfo(ns, s, 'CD', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else if (primaryHard){
+        {
+          const p = pCat*pLowX;
+          const ns = cloneAndDrawPrimary(s,'CD', null, primaryInv, pLowX);
+          ns.invalidNow = true;
+          setSubsetInfo(ns, s, 'CD', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+        {
+          const p = pCat*(1-pLowX);
+          const ns = cloneAndDrawPrimary(s,'CD', null, primaryInv, pLowX);
+          ns.invalidNow = false;
+          setSubsetInfo(ns, s, 'CD', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else {
+        const ns = cloneAndDrawPrimary(s,'CD', null, null, 0);
+        setSubsetInfo(ns, s, 'CD', earlyStop, subsetContains);
+        afterDraw(ns, pCat);
+      }
+    }
+    // DS branch
+    if (s.poolDS > 0){
+      const pCat = s.poolDS/poolTotal;
+      if (secondarySoft){
+        for (let r=0;r<8;r++){
+          const p = pCat*SEC_PROBS[r];
+          const ns = cloneAndDrawDS(s, r, secondaryInv, pLowY, true);
+          setSubsetInfo(ns, s, 'DS', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else if (secondaryHard){
+        {
+          const p = pCat*pLowY;
+          const ns = cloneAndDrawDS(s, null, secondaryInv, pLowY, false);
+          ns.invalidNow = true;
+          setSubsetInfo(ns, s, 'DS', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+        {
+          const p = pCat*(1-pLowY);
+          const ns = cloneAndDrawDS(s, null, secondaryInv, pLowY, false);
+          ns.invalidNow = false;
+          setSubsetInfo(ns, s, 'DS', earlyStop, subsetContains);
+          afterDraw(ns, p);
+        }
+      } else {
+        const ns = cloneAndDrawDS(s, null, null, 0, false);
+        setSubsetInfo(ns, s, 'DS', earlyStop, subsetContains);
+        afterDraw(ns, pCat);
+      }
+    }
+    // US branch
+    if (s.poolUS > 0){
+      const p = s.poolUS/poolTotal;
+      const ns = shallowAdvance(s);
+      ns.poolUS -= 1;
+      setSubsetInfo(ns, s, 'US', earlyStop, subsetContains);
+      afterDraw(ns, p);
+    }
+    // DT branch
+    if (s.poolDT > 0){
+      const p = s.poolDT/poolTotal;
+      const ns = shallowAdvance(s);
+      ns.poolDT -= 1;
+      ns.tertiaryGotten = true;
+      setSubsetInfo(ns, s, 'DT', earlyStop, subsetContains);
+      afterDraw(ns, p);
+    }
+    // UT branch
+    if (s.poolUT > 0){
+      const p = s.poolUT/poolTotal;
+      const ns = shallowAdvance(s);
+      ns.poolUT -= 1;
+      setSubsetInfo(ns, s, 'UT', earlyStop, subsetContains);
+      afterDraw(ns, p);
+    }
+
+    memo.set(k, dist);
+    return dist;
+  }
+
+  function shallowAdvance(s){
+    return {
+      poolCR:s.poolCR, poolCD:s.poolCD, poolDS:s.poolDS, poolUS:s.poolUS, poolDT:s.poolDT, poolUT:s.poolUT,
+      rollsSoFar: s.rollsSoFar+1,
+      primariesGotten: s.primariesGotten,
+      dsGotten: s.dsGotten,
+      tertiaryGotten: s.tertiaryGotten,
+      crVal: s.crVal, cdVal: s.cdVal,
+      primaryLowFlag: s.primaryLowFlag,
+      dsRankSum: s.dsRankSum,
+      earlyStopChecked: s.earlyStopChecked,
+      invalidNow: false,
+      anyInSubset: s.anyInSubset,
+    };
+  }
+
+  function cloneAndDrawPrimary(s, which, rankIdx, primaryInv, pLowX){
+    const ns = shallowAdvance(s);
+    if (which==='CR'){ ns.poolCR -= 1; } else { ns.poolCD -= 1; }
+    ns.primariesGotten = s.primariesGotten + 1;
+    if (rankIdx !== null){
+      if (which==='CR') ns.crVal = CR_VALUES[rankIdx]; else ns.cdVal = CD_VALUES[rankIdx];
+      if (rankIdx < (primaryInv?primaryInv.x:0)) ns.primaryLowFlag = true;
+    }
+    return ns;
+  }
+
+  function finalizePrimaryDraw(ns, s, primaryInv, cvThreshold){
+    // soft mode: only finalize invalidation once both primaries known
+    if (ns.primariesGotten === 2 && ns.primaryLowFlag){
+      const cv = 2*ns.crVal + ns.cdVal;
+      if (cv < cvThreshold) ns.invalidNow = true;
+    }
+  }
+
+  function cloneAndDrawDS(s, rank, secondaryInv, pLowY, softMode){
+    const ns = shallowAdvance(s);
+    ns.poolDS -= 1;
+    if (softMode){
+      const isLow = rank < secondaryInv.y;
+      const newSum = s.dsRankSum + rank;
+      const newCount = s.dsGotten + 1;
+      if (isLow){
+        const avg = newSum/newCount;
+        if (avg <= secondaryInv.y - 1){
+          ns.invalidNow = true;
+          return ns; // don't commit the ds stat if invalidated? still counts as drawn either way; score won't matter since terminal
+        }
+      }
+      ns.dsGotten = newCount;
+      ns.dsRankSum = newSum;
+    } else {
+      ns.dsGotten = s.dsGotten + 1;
+    }
+    return ns;
+  }
+
+  function setSubsetInfo(ns, s, category, earlyStop, subsetContains){
+    if (!earlyStop){ ns.anyInSubset = false; return; }
+    if (ns.rollsSoFar <= earlyStop.checkAt){
+      const inSub = subsetContains(earlyStop.subset, category);
+      ns.anyInSubset = (s.anyInSubset || inSub);
+    } else {
+      ns.anyInSubset = s.anyInSubset;
+    }
+  }
+
+  const initState = {
+    poolCR:1, poolCD:1, poolDS:3, poolUS:5, poolDT:1, poolUT:2,
+    rollsSoFar:0, primariesGotten:0, dsGotten:0, tertiaryGotten:false,
+    crVal:null, cdVal:null, primaryLowFlag:false, dsRankSum:0,
+    earlyStopChecked:false, invalidNow:false, anyInSubset:false,
+  };
+
+  const finalDist = solve(initState);
+  // normalize into structured result
+  const buckets = {achieved:[], failed_invalid:[], failed_unreachable:[], ditched:[]};
+  let totalProb = 0;
+  for (const [kk, p] of finalDist){
+    const [type, rollsStr] = kk.split(':');
+    buckets[type].push({rolls:Number(rollsStr), prob:p});
+    totalProb += p;
+  }
+  return {buckets, totalProb, memoSize: memo.size};
+}
+
+
+
+</script>
+<script>
+function $(id){return document.getElementById(id);}
+
+function readConfig(){
+  const target = parseFloat($('target').value);
+  let earlyStop = null;
+  if ($('esEnable').checked){
+    earlyStop = {checkAt: parseInt($('esCheckAt').value,10), subset: $('esSubset').value};
+  }
+  let invalidation = {primary:null, secondary:null};
+  if ($('pInvEnable').checked){
+    let x = parseInt($('pInvX').value,10);
+    x = Math.max(0, Math.min(7, isNaN(x)?2:x));
+    if (x > 0) invalidation.primary = {x, soft: $('pInvMode').value==='soft'};
+  }
+  if ($('sInvEnable').checked){
+    let y = parseInt($('sInvY').value,10);
+    y = Math.max(0, Math.min(7, isNaN(y)?2:y));
+    if (y > 0) invalidation.secondary = {y, soft: $('sInvMode').value==='soft'};
+  }
+  return {target, earlyStop, invalidation};
+}
+
+function fmtPct(p){ return (p*100).toFixed(2)+'%'; }
+
+function aggregate(arr){
+  const p = arr.reduce((a,b)=>a+b.prob,0);
+  const rolls = p>0 ? arr.reduce((a,b)=>a+b.prob*b.rolls,0)/p : 0;
+  return {p, rolls};
+}
+
+function render(res, config){
+  const b = res.buckets;
+  const achieved = aggregate(b.achieved);
+  const invalid = aggregate(b.failed_invalid);
+  const unreach = aggregate(b.failed_unreachable);
+  const ditched = aggregate(b.ditched);
+  const failP = invalid.p + unreach.p + ditched.p;
+
+  const p = achieved.p;
+  const expEchoes = p>0 ? 1/p : Infinity;
+
+  // expected tuners per attempt breakdown
+  const failRollsWeighted = (invalid.p*invalid.rolls + unreach.p*unreach.rolls + ditched.p*ditched.rolls);
+  const avgFailRolls = failP>0 ? failRollsWeighted/failP : 0;
+  const expTuners = p>0 ? (10*avgFailRolls)*((1-p)/p) + (10*achieved.rolls) : Infinity;
+
+  const targetLabel = {2:'2-liner',3:'3-liner','3.5':'3.5-liner',4:'4-liner','4.5':'4.5-liner',5:'5-liner'}[String(config.target)];
+
+  let html = '';
+  html += '<div class="headline">';
+  html += statBlock('P(reach '+targetLabel+' or better)', fmtPct(p), 'avg '+achieved.rolls.toFixed(2)+' rolls when successful');
+  html += statBlock('Expected echoes needed', isFinite(expEchoes)?expEchoes.toFixed(2):'&infin;', 'to land one qualifying echo', true);
+  html += statBlock('Expected tuners spent', isFinite(expTuners)?Math.round(expTuners).toLocaleString():'&infin;', '&asymp; '+(isFinite(expTuners)?(expTuners/10).toFixed(1):'&infin;')+' rolls total, incl. failed attempts');
+  html += '</div>';
+
+  // bar
+  html += '<div class="bar-row"><div class="bar-track">';
+  html += '<div class="bar-seg" style="width:'+(p*100)+'%; background:var(--good);"></div>';
+  html += '<div class="bar-seg" style="width:'+(invalid.p*100)+'%; background:var(--bad);"></div>';
+  html += '<div class="bar-seg" style="width:'+(unreach.p*100)+'%; background:var(--ink-dim);"></div>';
+  html += '<div class="bar-seg" style="width:'+(ditched.p*100)+'%; background:var(--warn);"></div>';
+  html += '</div></div>';
+
+  html += '<table><thead><tr><th>Outcome</th><th>Probability</th><th>Expected echoes</th><th>Avg rolls</th><th>Avg tuners</th></tr></thead><tbody>';
+  html += tableRow('ok','Achieved '+targetLabel+' (or better)', achieved);
+  html += tableRow('bad','Failed &mdash; culled', invalid, !!(config.invalidation.primary||config.invalidation.secondary));
+  html += tableRow('neu','Failed &mdash; unreachable', unreach);
+  html += tableRow('warn','Ditched &mdash; early stop', ditched, !!config.earlyStop);
+  html += '</tbody></table>';
+
+  html += '<div class="note" style="margin-top:14px;">Total probability mass: '+(res.totalProb*100).toFixed(3)+'% (small deviation from 100% comes from the CSV\'s rounded input probabilities).</div>';
+
+  $('results').innerHTML = html;
+}
+
+function statBlock(k,v,v2,alt){
+  return '<div class="stat"><div class="k">'+k+'</div><div class="v'+(alt?' alt':'')+'">'+v+'</div><div class="v2">'+v2+'</div></div>';
+}
+function tableRow(tagClass,label,agg,active){
+  const dim = active===false ? ' style="opacity:.45;"' : '';
+  const ee = agg.p>0 ? (1/agg.p).toFixed(2) : '&mdash;';
+  return '<tr'+dim+'><td><span class="tag '+tagClass+'"></span> &nbsp;'+label+'</td><td>'+fmtPct(agg.p)+'</td><td>'+ee+'</td><td>'+(agg.p>0?agg.rolls.toFixed(2):'&mdash;')+'</td><td>'+(agg.p>0?(agg.rolls*10).toFixed(1):'&mdash;')+'</td></tr>';
+}
+
+function recompute(){
+  const config = readConfig();
+  const res = computeDistribution(config);
+  render(res, config);
+  const wrap = $('compareWrap');
+  
+  // Check current visibility status statefully
+  if (wrap.innerHTML !== '') {
+    compareAllStrategies();
+  }
+}
+
+function renderTicks(containerId, activeVal){
+  const el = $(containerId);
+  let html='';
+  for(let i=0;i<=7;i++){
+    const left = (i/8*100).toFixed(3)+'%';
+    html += '<span style="left:'+left+';"'+(i===activeVal?' class="active"':'')+'>'+i+'</span>';
+  }
+  el.innerHTML = html;
+}
+
+function baselineExpectedEchoes(target){
+  const res = computeDistribution({target, earlyStop:null, invalidation:{primary:null, secondary:null}});
+  const p = aggregate(res.buckets.achieved).p;
+  return p>0 ? 1/p : Infinity;
+}
+
+function echoIncreasePct(eeWithout, eeWith){
+  // 1 - (Ee without the rule / Ee with the rule), as a %.
+  if (!isFinite(eeWithout) || eeWithout<=0) return null;
+  if (!isFinite(eeWith)) return 100;
+  return (1 - (eeWithout/eeWith)) * 100;
+}
+
+function updateImpacts(){
+  const target = parseFloat($('target').value);
+  const eeWithout = baselineExpectedEchoes(target);
+
+  // Primary
+  const x = Math.max(0, Math.min(7, parseInt($('pInvX').value,10)||0));
+  const pSoft = $('pInvMode').value==='soft';
+  renderTicks('pTicks', x);
+  const pRes = computeDistribution({target, earlyStop:null, invalidation:{primary:{x, soft:pSoft}, secondary:null}});
+  const pP = aggregate(pRes.buckets.achieved).p;
+  const eeWithP = pP>0 ? 1/pP : Infinity;
+  const pPct = echoIncreasePct(eeWithout, eeWithP);
+  $('pImpactFill').style.width = (pPct===null?0:pPct)+'%';
+  $('pImpactVal').textContent = pPct===null ? '&mdash;' : pPct.toFixed(1)+'%';
+
+  // Secondary
+  const y = Math.max(0, Math.min(7, parseInt($('sInvY').value,10)||0));
+  const sSoft = $('sInvMode').value==='soft';
+  renderTicks('sTicks', y);
+  const sRes = computeDistribution({target, earlyStop:null, invalidation:{primary:null, secondary:{y, soft:sSoft}}});
+  const sP = aggregate(sRes.buckets.achieved).p;
+  const eeWithS = sP>0 ? 1/sP : Infinity;
+  const sPct = echoIncreasePct(eeWithout, eeWithS);
+  $('sImpactFill').style.width = (sPct===null?0:sPct)+'%';
+  $('sImpactVal').textContent = sPct===null ? '&mdash;' : sPct.toFixed(1)+'%';
+}
+
+function updateVisibility(){
+  $('esBlock').classList.toggle('show', $('esEnable').checked);
+  $('pCullBlock').classList.toggle('cull-disabled', !$('pInvEnable').checked);
+  $('sCullBlock').classList.toggle('cull-disabled', !$('sInvEnable').checked);
+  updateImpacts();
+}
+
+['target','esEnable','esCheckAt','esSubset','pInvEnable','pInvX','pInvMode','sInvEnable','sInvY','sInvMode'].forEach(id=>{
+  $(id).addEventListener('change', ()=>{ updateVisibility(); recompute(); });
+  $(id).addEventListener('input', ()=>{ updateVisibility(); recompute(); });
+});
+$('calc').addEventListener('click', recompute);
+
+function compareAllStrategies(){
+  const base = readConfig(); // uses current target + invalidation settings, ignores current early-stop toggle
+  const strategies = [
+    {checkAt:1, subset:'primary', label:'Check roll 1 &middot; CR/CD only'},
+    {checkAt:1, subset:'primary_secondary', label:'Check roll 1 &middot; CR/CD or desired secondary'},
+    {checkAt:1, subset:'any', label:'Check roll 1 &middot; any desired substat'},
+    {checkAt:2, subset:'primary', label:'Check rolls 1&ndash;2 &middot; CR/CD only'},
+    {checkAt:2, subset:'primary_secondary', label:'Check rolls 1&ndash;2 &middot; CR/CD or desired secondary'},
+    {checkAt:2, subset:'any', label:'Check rolls 1&ndash;2 &middot; any desired substat'},
+  ];
+  const rows = strategies.map(strat=>{
+    const config = {target: base.target, earlyStop:{checkAt:strat.checkAt, subset:strat.subset}, invalidation: base.invalidation};
+    const res = computeDistribution(config);
+    const achieved = aggregate(res.buckets.achieved);
+    const ditched = aggregate(res.buckets.ditched);
+    const invalid = aggregate(res.buckets.failed_invalid);
+    const unreach = aggregate(res.buckets.failed_unreachable);
+    const p = achieved.p;
+    const failRollsWeighted = invalid.p*invalid.rolls + unreach.p*unreach.rolls + ditched.p*ditched.rolls;
+    const failP = invalid.p+unreach.p+ditched.p;
+    const avgFailRolls = failP>0 ? failRollsWeighted/failP : 0;
+    const expTuners = p>0 ? (10*avgFailRolls)*((1-p)/p) + (10*achieved.rolls) : Infinity;
+    const expEchoes = p>0 ? 1/p : Infinity;
+    return {label:strat.label, p, expEchoes, expTuners};
+  });
+  // lower expected tuners = better (cheaper path to target)
+  const bestIdx = rows.reduce((best,r,i)=> (isFinite(r.expTuners) && (best===-1 || r.expTuners<rows[best].expTuners)) ? i : best, -1);
+
+  const targetLabel = {2:'2-liner',3:'3-liner','3.5':'3.5-liner',4:'4-liner','4.5':'4.5-liner',5:'5-liner'}[String(base.target)];
+  let html = '<div class="compare-box">';
+  html += '<div class="note" style="margin-bottom:8px;">All 6 combinations, evaluated against the current target ('+targetLabel+') and line-invalidation settings. Lowest expected tuners is highlighted.</div>';
+  html += '<table><thead><tr><th>Strategy</th><th>P(achieve)</th><th>Expected echoes</th><th>Expected tuners</th></tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    const isBest = i===bestIdx;
+    html += '<tr><td style="font-family:var(--sans);">'+r.label+'</td><td'+(isBest?' class="best"':'')+'>'+fmtPct(r.p)+'</td><td>'+(isFinite(r.expEchoes)?r.expEchoes.toFixed(2):'&infin;')+'</td><td'+(isBest?' class="best"':'')+'>'+(isFinite(r.expTuners)?Math.round(r.expTuners).toLocaleString():'&infin;')+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  $('compareWrap').innerHTML = html;
+}
+$('compareBtn').addEventListener('click', toggleComparison);
+
+function toggleComparison() {
+  const wrap = $('compareWrap');
+  
+  // Check current visibility status statefully
+  if (wrap.innerHTML === '') {
+    // It's hidden: calculate data, inject HTML
+    compareAllStrategies();
+  } else {
+    // It's shown: collapse it by wiping content
+    wrap.innerHTML = '';
+  }
+}
+
+updateVisibility();
+recompute();
+</script>
+</body>
+</html>
